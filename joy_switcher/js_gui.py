@@ -26,6 +26,7 @@ layout = [[sg.Text('Orginal SC Layout XML'),
 
 window = sg.Window('Joy Switcher', layout)
 devices = {}
+checked = False
 
 
 def load_xml_layout(orginal_file):
@@ -46,18 +47,19 @@ def load_xml_layout(orginal_file):
 def load_window_layout():
     global window, layout
     table = [[sg.Text(f"Instance {i}:"),
-              sg.Text(devices[i]["name"], key=f"btn{i}"), sg.Text(f"Change to:"),
+              sg.Text(devices[i]["name"], key=f"btn{i}"), sg.Push(),
+              sg.Text(f"Change to:"),
               sg.Combo([i for i in range(1, len(devices) + 1)],
                        default_value=devices[i]["instance"],
                        key=int(devices[i]['instance'])), ] for i in range(1, len(devices) + 1)]
 
     layout = [[sg.Text('Orginal SC Layout XML'),
-               sg.In(xml_file_path.split(sep="/")[-1:], key='-IN-'),
-               sg.FileBrowse(file_types=(("XLM file", "*.xml"),))],
+               sg.In(xml_file_path.split(sep="/")[-1:], key='-IN-', size=(50, 10)),
+               sg.FileBrowse(file_types=(('XLM file', '*.xml'),))],
               [sg.Text('New SC Layout XML Name'),
-               sg.Input(key='mod_name', default_text=settings["SC Layout"].get("modified_layout_name", "")),
+               sg.In(key='mod_name', default_text=settings["SC Layout"].get("modified_layout_name", "")),
                sg.Button('Save', key="save_mod_name")],
-              [sg.Frame("Inputs", layout=table)],
+              [sg.Frame("Inputs", layout=table, size=(535, (len(devices) * 30)))],
               [sg.Button('Reload Xml'), sg.Button(f"Check Inputs", key="check_inputs")],
               [sg.Button('Save', key="Save"), sg.Button('Cancel')]]
     window1 = sg.Window('Joy Switcher', layout)
@@ -95,7 +97,7 @@ def save_elements(data):
 
         else:
             print(f"Error can´t save device {input_device}")
-        save_settings()
+    save_settings()
 
 
 def check_inputs(input_devices):
@@ -115,24 +117,33 @@ def save_settings():
 
 
 def write_to_xml():
-    new_xml_path = xml_file_path.replace(
-        xml_file_path[xml_file_path.index(xml_file_path.split("/")[-1:][0]):],
-        settings["SC Layout"]["modified_layout_name"]
-    )
+    new_xml_path = settings["SC Layout"]["modified_layout_name"]
     mod_divices_dict = devices.copy()
-    #pprint.pprint(mod_divices_dict, indent=4)
-
-    mod_divices_dict = settings["inputs"]
     pprint.pprint(mod_divices_dict)
+    moded_devices = {"Label": settings["SC Layout"]["modified_layout_name"].split(".xml")[:-1][0] }
+    for input_device in settings["inputs"]:
+        # If UUID is the same and orginal xml Instance is different to instance from settings
+        if settings["inputs"][input_device]["uuid"] == \
+                mod_divices_dict[settings["inputs"][input_device]["old_instance_nr"]]["uuid"] and \
+                settings["inputs"][input_device]["new_instance_nr"] != \
+                int(mod_divices_dict[settings["inputs"][input_device]["old_instance_nr"]]["instance"]):
+            # print(f'Inpu Dev {input_device} als Sett {settings["inputs"][input_device]}:\n'
+            #       f'sett nr old: {settings["inputs"][input_device]["old_instance_nr"]}'
+            #       f' insta nr old: {mod_divices_dict[settings["inputs"][input_device]["old_instance_nr"]]["instance"]} \n '
+            #       f' sett new nr: {settings["inputs"][input_device]["new_instance_nr"]}')
 
-    for input_device in mod_divices_dict:
-        print(f'Inpu Dev {input_device} als Sett {settings[mod_divices_dict[input_device]["name"]]}:\n'
-              f' insta: {mod_divices_dict[input_device]["instance"]} \n '
-              f'sett: {settings[mod_divices_dict[input_device]["name"]]["new_instance"]}')
-        if int(mod_divices_dict[input_device]["instance"]) != int(settings[mod_divices_dict[input_device]["name"]["new_instance"]]):
-            print("nich gleich")
+            moded_devices[settings["inputs"][input_device]["old_instance_nr"]] = \
+                {
+                    "Product": f'{input_device.split("_")[:-1][0] if "_" in input_device else input_device}  '
+                               f'{mod_divices_dict[settings["inputs"][input_device]["old_instance_nr"]]["uuid"]}',
+                    "Instance": settings["inputs"][input_device]["new_instance_nr"],
 
-    # set_devices_instance(mod_divices_dict, xml_file_path, new_xml_path)
+                }
+
+            # todo hier das dict bauen
+
+            # set_devices_instance(mod_divices_dict, xml_file_path, new_xml_path)
+    print(moded_devices)
 
 
 while True:
@@ -149,7 +160,7 @@ while True:
             # print(f"xml {xml_file_path.split(sep='/')[-1:][0]}")
         load_xml_layout(xml_file_path)
         load_window_layout()
-        save_settings()
+        # save_settings()
 
     if event == "Reload Xml":
         xml_file_path = reload_xml(values)
@@ -158,6 +169,7 @@ while True:
 
     # calc inputs
     if event == "check_inputs":
+        checked = True
         check_inputs(values)
 
     # New Layout Name
@@ -171,6 +183,10 @@ while True:
     if event == "Browse":
         print("browse")
     if event == "Save":
-        write_to_xml()
+        if checked:
+            write_to_xml()
+            checked = False
+        else:
+            sg.popup(f"You need to check the inputs first\nPress 'Check Inputs' to continue")
 
 window.close()
