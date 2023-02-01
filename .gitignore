@@ -1,1 +1,4 @@
 /venv/
+/js_gui.build/
+/js_gui.dist/
+/js_gui.onefile-build/

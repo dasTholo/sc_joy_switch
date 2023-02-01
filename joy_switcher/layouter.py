@@ -38,20 +38,31 @@ def get_all_devices(xml_path):
     return device_list
 
 
-def set_devices_instance(mod_devices: dict, old_xml_path, new_xml_name):
+def set_devices_instance(mod_devices: dict, old_xml_path):
+    """
+    Write xml to Disk. Profil Name will be
+        layout_new_profil_name_exported.xml'
+    :param mod_devices: {'ProfilName': 'new_profil_name'},
+                    1: {'Product': 'vJoy Device  {12C820E0-8E65-11ED-8003-444553540000}',
+                        'Instance': 7},
+                    7: {'Product': 'vJoy Device  {BEAD1234-0000-0000-0000-504944564944}',
+                        'Instance': 1}}
+    :param old_xml_path:
+    :return:
+    """
     mod_xml = load_xml_file(old_xml_path)
-    new_path = old_xml_path.replace(old_xml_path[old_xml_path.index(old_xml_path.split("/")[-1:][0]):], new_xml_name)
+    new_path = old_xml_path.replace(old_xml_path[old_xml_path.index(old_xml_path.split("/")[-1:][0]):],
+                                    f'layout_{mod_devices["ProfilName"]}_exported.xml')
+    # set Label and Profile Name
+    mod_xml.attrib["profileName"] = mod_devices["ProfilName"]
+    mod_xml.xpath("CustomisationUIHeader")[0].attrib["label"] = mod_devices["ProfilName"]
 
-    # todo das label hier setzen in den Header aus dem Dict
-    for test in mod_xml.xpath("CustomisationUIHeader"):
-        print(test.attrib)
     for device in mod_xml.xpath("options"):
         # check name
         # if child.attrib["type"] == "joystick" and child.attrib["Product"]:
         #    child.attrib["instance"] = mod_devices
         if device.attrib["type"] == "joystick" and int(device.attrib["instance"]) in mod_devices.keys():
             if device.attrib['Product'] == mod_devices[int(device.attrib["instance"])]["Product"]:
-                print("ja is gleich")
                 device.attrib["instance"] = str(mod_devices[int(device.attrib["instance"])]["Instance"])
 
             # print(f"child instace {device.attrib['instance']}\n"
@@ -60,6 +71,7 @@ def set_devices_instance(mod_devices: dict, old_xml_path, new_xml_name):
             # print(type(device.attrib["instance"]))
 
     write_xml_file(new_path, mod_xml)
+
 
 def check_device(old_xml, device_list=[]):
     for device in old_xml.xpath("options"):
@@ -77,10 +89,13 @@ def check_device(old_xml, device_list=[]):
 if __name__ == "__main__":
     # check_device(load_xml_file(ORG_LAYOUT_FILE), ["{812F3344-0000-0000-0000-504944564944}"])
     # print(get_all_devices(ORG_LAYOUT_FILE))
-    set_devices_instance({1: {'Product': 'vJoy Device  {12C820E0-8E65-11ED-8003-444553540000}', "Instance": 33}},
-                         "D:/OneDrive/Games/SC/SC Profiles/layout_t_317_1_exported.xml", "neues_layout.xml")
+    set_devices_instance({'ProfilName': 'ertert',
+                          1: {'Product': 'vJoy Device  {12C820E0-8E65-11ED-8003-444553540000}',
+                              'Instance': 7},
+                          7: {'Product': 'vJoy Device  {BEAD1234-0000-0000-0000-504944564944}',
+                              'Instance': 1}}, "D:/OneDrive/Games/SC/SC Profiles/layout_t_317_1_exported.xml")
 
-# print(etree.tostring(root, pretty_print=True))
+
 
 
 # https://pyautogui.readthedocs.io/en/latest/install.html#windows

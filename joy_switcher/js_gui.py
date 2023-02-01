@@ -9,17 +9,17 @@ from joy_switcher.layouter import get_all_devices, set_devices_instance
 sg.theme('DarkAmber')
 # if settings not set pop browsefile, create ini
 if not os.path.exists("./config.json"):
-    DEFAULT_SETTINGS = {"SC Layout": {"orginal_file": "", "modified_layout_name": "modified.xml"}}
+    DEFAULT_SETTINGS = {"SC Layout": {"original_file": "", "modified_layout_name": "modified"}}
     with open("./config.json", "w") as configfile:
         configfile.write(json.dumps(DEFAULT_SETTINGS))
 
 config = sg.UserSettings('./config.json', use_config_file=False, convert_bools_and_none=True, autosave=True)
 settings = config.get_dict()
-xml_file_path = settings["SC Layout"]["orginal_file"]
-layout = [[sg.Text('Orginal SC Layout XML'),
+xml_file_path = settings["SC Layout"]["original_file"]
+layout = [[sg.Text('Original SC Layout XML'),
            sg.In(xml_file_path.split(sep="/")[-1:], key='-IN-'),
            sg.FileBrowse(file_types=(("XLM file", "*.xml"),), key="Browse")],
-          [sg.Text('New SC Layout XML Name'),
+          [sg.Text('New SC Layout Name'),
            sg.Input(key='mod_name', default_text=settings["SC Layout"].get("modified_layout_name", "")),
            sg.Button('Save', key="save_mod_name")],
           [sg.Button('Load Xml'), sg.Button('Cancel')]]
@@ -29,17 +29,17 @@ devices = {}
 checked = False
 
 
-def load_xml_layout(orginal_file):
+def load_xml_layout(original_file):
     """
     Return a List from all known Devices from the xml
     {   1: {   'instance': '1',
            'name': 'Throttle - HOTAS Warthog',
            'uuid': '{ED0EF470-997F-11ED-8003-444553540000}'},}
-    :param orginal_file:
+    :param original_file:
     :return:
     """
     global devices
-    devices = get_all_devices(orginal_file)
+    devices = get_all_devices(original_file)
     # pprint.pprint(devices, indent=4)
     return devices
 
@@ -53,10 +53,10 @@ def load_window_layout():
                        default_value=devices[i]["instance"],
                        key=int(devices[i]['instance'])), ] for i in range(1, len(devices) + 1)]
 
-    layout = [[sg.Text('Orginal SC Layout XML'),
+    layout = [[sg.Text('Original SC Layout XML'),
                sg.In(xml_file_path.split(sep="/")[-1:], key='-IN-', size=(50, 10)),
                sg.FileBrowse(file_types=(('XLM file', '*.xml'),))],
-              [sg.Text('New SC Layout XML Name'),
+              [sg.Text('New SC Layout Name'),
                sg.In(key='mod_name', default_text=settings["SC Layout"].get("modified_layout_name", "")),
                sg.Button('Save', key="save_mod_name")],
               [sg.Frame("Inputs", layout=table, size=(535, (len(devices) * 30)))],
@@ -70,11 +70,11 @@ def load_window_layout():
 def reload_xml(values):
     global xml_file_path
     if values.get("Browse", None) != "":
-        settings["SC Layout"]["orginal_file"] = values["Browse"]
+        settings["SC Layout"]["original_file"] = values["Browse"]
         save_settings()
-        xml_file_path = settings["SC Layout"]["orginal_file"]
+        xml_file_path = settings["SC Layout"]["original_file"]
     else:
-        xml_file_path = settings["SC Layout"]["orginal_file"]
+        xml_file_path = settings["SC Layout"]["original_file"]
     return xml_file_path
 
 
@@ -94,7 +94,6 @@ def save_elements(data):
             settings["inputs"][input_name] = {"uuid": dev["uuid"],
                                               "old_instance_nr": int(dev["instance"]),
                                               "new_instance_nr": data[input_device]}
-
         else:
             print(f"Error can´t save device {input_device}")
     save_settings()
@@ -120,9 +119,9 @@ def write_to_xml():
     new_xml_path = settings["SC Layout"]["modified_layout_name"]
     mod_divices_dict = devices.copy()
     pprint.pprint(mod_divices_dict)
-    moded_devices = {"Label": settings["SC Layout"]["modified_layout_name"].split(".xml")[:-1][0] }
+    moded_devices = {"ProfilName": new_xml_path}
     for input_device in settings["inputs"]:
-        # If UUID is the same and orginal xml Instance is different to instance from settings
+        # If UUID is the same and original xml Instance is different to instance from settings
         if settings["inputs"][input_device]["uuid"] == \
                 mod_divices_dict[settings["inputs"][input_device]["old_instance_nr"]]["uuid"] and \
                 settings["inputs"][input_device]["new_instance_nr"] != \
@@ -142,7 +141,7 @@ def write_to_xml():
 
             # todo hier das dict bauen
 
-            # set_devices_instance(mod_divices_dict, xml_file_path, new_xml_path)
+            # set_devices_instance(mod_divices_dict, settings["SC Layout"]["original_file"])
     print(moded_devices)
 
 
@@ -174,10 +173,7 @@ while True:
 
     # New Layout Name
     if event == "save_mod_name":
-        if ".xml" in settings["SC Layout"].get("modified_layout_name") and ".xml" in values['mod_name']:
-            settings["SC Layout"].set("modified_layout_name", values['mod_name'])
-        else:
-            settings["SC Layout"]["modified_layout_name"] = f"{values['mod_name']}.xml"
+        settings["SC Layout"]["modified_layout_name"] = values['mod_name']
         window["mod_name"].update(settings["SC Layout"].get("modified_layout_name"))
         save_settings()
     if event == "Browse":
